@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp
+data:
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: YWRtaW4=
+  POSTGRES_DB: gym
+  FLASK_APP: app.py
+

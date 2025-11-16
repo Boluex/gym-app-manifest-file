@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gym-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gym-app
+  template:
+    metadata:
+      labels:
+        app: gym-app
+    spec:
+      containers:
+      - name: web
+        image: your-dockerhub-username/gym-app:latest
+        ports:
+        - containerPort: 5000 
+        env:
+        - name: FLASK_APP
+          value: "app.py"
+        - name: FLASK_ENV
+          value: "production"
+        - name: DATABASE_URL
+          value: "postgresql://admin:admin123@gym-db-service:5432/gym"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gym-app-service
+spec:
+  type: ClusterIP
+  selector:
+    app: gym-app
+  ports:      
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gym-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gym-db
+  template:
+    metadata:
+      labels:
+        app: gym-db
+    spec:
+      containers:
+      - name: db
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: myapp
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: myapp
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: myapp
+              key: POSTGRES_DB
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - admin
+        resources:
+          limits:
+            memory: "1024Mi"
+            cpu: "500m"
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+        volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: db-data
+        persistentVolumeClaim:
+          claimName: db-data
+
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gym-db-service
+spec:
+  type: ClusterIP
+  selector:
+    app: gym-db
+  ports:      
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432  
+
+
+
+    
