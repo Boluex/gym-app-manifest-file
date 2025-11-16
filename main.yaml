@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: web
-        image: boluex/gym-hub:4
+        image: boluex/gym-hub:latest
         ports:
         - containerPort: 5000 
         env:
